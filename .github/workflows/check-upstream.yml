@@ -1,0 +1,35 @@
+name: Check for upstream updates
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Täglich um 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: rpi
+
+      - name: Add upstream remote and fetch
+        run: |
+          git remote add upstream https://github.com/raspberrypi/linux.git
+          git fetch upstream
+
+      - name: Compare upstream with local
+        id: compare
+        run: |
+          COMMITS_AHEAD=$(git rev-list HEAD..upstream/rpi --count)
+          echo "Commits ahead: $COMMITS_AHEAD"
+          echo "commits_ahead=$COMMITS_AHEAD" >> "$GITHUB_OUTPUT"
+
+      - name: Report result
+        if: steps.compare.outputs.commits_ahead != '0'
+        run: |
+          echo "⚠️ Upstream has ${{
+            steps.compare.outputs.commits_ahead
+          }} new commit(s) that are not in the local 'rpi' branch."
